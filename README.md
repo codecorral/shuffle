@@ -4,15 +4,15 @@ Declarative configuration for [AgentDeck](https://github.com/asheshgoplani/agent
 
 ## Overview
 
-Shuffle provides a "deal" — a declarative configuration that sets up agent-deck with predefined groups, session shells, and profiles. Instead of manually running dozens of CLI commands, define your setup in a `.deck.yaml` file and let Shuffle apply it.
+Shuffle reads a `.deck.yaml` file — a declarative description of your agent-deck layout — and applies it idempotently. Instead of manually running dozens of CLI commands to set up profiles, groups, sessions, and conductors, define the desired state in a deck file and run `shuffle deal` to make it so.
 
 ## Concepts
 
-- **Deal** — A complete agent-deck configuration described declaratively
-- **Groups** — Logical groupings of sessions (e.g., Elaboration, Construction, Operations)
-- **Session Shells** — Reusable session templates with agents, MCPs, worktree config, and prompts
-- **Profiles** — Agent-deck profile definitions
+- **Deck** — A `.deck.yaml` file describing the desired agent-deck layout
+- **Shells** — Reusable session templates with agents, MCPs, worktree config, and prompts
+- **Groups** — Logical groupings of sessions and conductors (e.g., elaboration, construction, operations)
 - **Conductors** — Meta-agent orchestrators declared within groups
+- **Profiles** — Agent-deck profile targeting (which profile the deck applies to)
 
 ## Installation
 
@@ -124,7 +124,7 @@ When a session references a shell, fields are merged:
 - **Idempotent**: Running `shuffle deal` twice makes no duplicate changes
 - **Additive**: Only creates missing entities, never deletes
 - **Non-destructive**: Manual sessions/groups are never touched
-- **Ordered**: Profile → MCPs → Groups → Conductors → Sessions → MCP attachments
+- **Ordered**: Profile → MCPs → Groups → Conductors → Sessions → MCP/Skill attachments
 
 ## Related Repositories
 
