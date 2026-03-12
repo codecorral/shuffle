@@ -19,7 +19,7 @@ The module SHALL provide `programs.agent-deck.defaultTool` (string, default `"cl
 - **THEN** generated TOML contains `default_tool = "codex"`
 
 ### Requirement: Shell section options
-The module SHALL provide typed options under `programs.agent-deck.shell` for `envFiles` (list of string), `initScript` (string), and `ignoreMissingEnvFiles` (bool, default `true`).
+The module SHALL provide typed options under `programs.agent-deck.shell` for `envFiles` (list of string), `initScript` (string), and `ignoreMissingEnvFiles` (bool). All section options default to `null` (unset) — only explicitly set values appear in generated TOML, allowing agent-deck to apply its own defaults.
 
 #### Scenario: Shell env files configured
 - **WHEN** `programs.agent-deck.shell.envFiles = ["~/.agent-deck.env" ".env"]`
@@ -30,49 +30,49 @@ The module SHALL provide typed options under `programs.agent-deck.shell` for `en
 - **THEN** the `[shell]` section is omitted from generated TOML
 
 ### Requirement: Claude section options
-The module SHALL provide typed options under `programs.agent-deck.claude` for `configDir` (string), `dangerousMode` (bool, default `false`), `allowDangerousMode` (bool, default `false`), and `envFile` (string).
+The module SHALL provide typed options under `programs.agent-deck.claude` for `configDir` (string), `dangerousMode` (bool), `allowDangerousMode` (bool), and `envFile` (string). All default to `null`.
 
 #### Scenario: Claude config dir override
 - **WHEN** `programs.agent-deck.claude.configDir = "~/.claude-work"`
 - **THEN** generated TOML contains `[claude]` with `config_dir = "~/.claude-work"`
 
 ### Requirement: Codex section options
-The module SHALL provide typed options under `programs.agent-deck.codex` for `yoloMode` (bool, default `false`).
+The module SHALL provide typed options under `programs.agent-deck.codex` for `yoloMode` (bool). Defaults to `null`.
 
 #### Scenario: Codex yolo mode enabled
 - **WHEN** `programs.agent-deck.codex.yoloMode = true`
 - **THEN** generated TOML contains `[codex]` with `yolo_mode = true`
 
 ### Requirement: Docker section options
-The module SHALL provide typed options under `programs.agent-deck.docker` for `defaultEnabled` (bool), `defaultImage` (string), `cpuLimit` (string), `memoryLimit` (string), `mountSsh` (bool), `autoCleanup` (bool, default `true`), `environment` (list of string), and `volumeIgnores` (list of string).
+The module SHALL provide typed options under `programs.agent-deck.docker` for `defaultEnabled` (bool), `defaultImage` (string), `cpuLimit` (string), `memoryLimit` (string), `mountSsh` (bool), `autoCleanup` (bool), `environment` (list of string), and `volumeIgnores` (list of string). All default to `null`.
 
 #### Scenario: Docker sandbox defaults
 - **WHEN** `programs.agent-deck.docker.mountSsh = true` and `programs.agent-deck.docker.autoCleanup = true`
 - **THEN** generated TOML contains `[docker]` with `mount_ssh = true` and `auto_cleanup = true`
 
 ### Requirement: Logs section options
-The module SHALL provide typed options under `programs.agent-deck.logs` for `maxSizeMb` (int, default `10`), `maxLines` (int, default `10000`), and `removeOrphans` (bool, default `true`).
+The module SHALL provide typed options under `programs.agent-deck.logs` for `maxSizeMb` (int), `maxLines` (int), and `removeOrphans` (bool). All default to `null`.
 
 #### Scenario: Custom log limits
 - **WHEN** `programs.agent-deck.logs.maxSizeMb = 50`
 - **THEN** generated TOML contains `[logs]` with `max_size_mb = 50`
 
 ### Requirement: Updates section options
-The module SHALL provide typed options under `programs.agent-deck.updates` for `autoUpdate` (bool, default `false`), `checkEnabled` (bool, default `true`), `checkIntervalHours` (int, default `24`), and `notifyInCli` (bool, default `true`).
+The module SHALL provide typed options under `programs.agent-deck.updates` for `autoUpdate` (bool), `checkEnabled` (bool), `checkIntervalHours` (int), and `notifyInCli` (bool). All default to `null`.
 
 #### Scenario: Disable update checks
 - **WHEN** `programs.agent-deck.updates.checkEnabled = false`
 - **THEN** generated TOML contains `[updates]` with `check_enabled = false`
 
 ### Requirement: Global search section options
-The module SHALL provide typed options under `programs.agent-deck.globalSearch` for `enabled` (bool, default `true`), `tier` (enum `["auto" "instant" "balanced"]`, default `"auto"`), `memoryLimitMb` (int, default `100`), `recentDays` (int, default `90`), and `indexRateLimit` (int, default `20`).
+The module SHALL provide typed options under `programs.agent-deck.globalSearch` for `enabled` (bool), `tier` (enum `["auto" "instant" "balanced"]`), `memoryLimitMb` (int), `recentDays` (int), and `indexRateLimit` (int). All default to `null`.
 
 #### Scenario: Search tier override
 - **WHEN** `programs.agent-deck.globalSearch.tier = "instant"`
 - **THEN** generated TOML contains `[global_search]` with `tier = "instant"`
 
 ### Requirement: MCP pool section options
-The module SHALL provide typed options under `programs.agent-deck.mcpPool` for `enabled` (bool, default `false`), `autoStart` (bool, default `true`), `poolAll` (bool, default `false`), `excludeMcps` (list of string), `fallbackToStdio` (bool, default `true`), and `showPoolStatus` (bool, default `true`).
+The module SHALL provide typed options under `programs.agent-deck.mcpPool` for `enabled` (bool), `autoStart` (bool), `poolAll` (bool), `excludeMcps` (list of string), `fallbackToStdio` (bool), and `showPoolStatus` (bool). All default to `null`.
 
 #### Scenario: MCP pool enabled
 - **WHEN** `programs.agent-deck.mcpPool.enabled = true` and `programs.agent-deck.mcpPool.poolAll = true`
