@@ -32,4 +32,24 @@ shuffle/
 - Use OpenSpec for all design changes
 - Configuration format should be declarative and human-readable
 - Support agent-deck's full configuration surface (groups, sessions, shells, MCPs, skills, conductors)
-- Build and test: `go build ./cmd/shuffle/`
+- Build: `go build ./cmd/shuffle/`
+- Test: `go test ./...`
+- Requires Go 1.18+ (uses generics)
+
+## CLI Usage
+```
+shuffle validate <deck.yaml>   # Parse, validate, check references
+shuffle diff <deck.yaml>       # Show planned actions (desired vs current state)
+shuffle deal <deck.yaml>       # Apply the deck (execute actions via agent-deck)
+```
+
+## Runtime Requirements
+- `agent-deck` binary must be on PATH (used for state discovery and action execution)
+- Config file: `~/.agent-deck/config.toml` (read for MCP discovery, appended for new MCPs)
+
+## Gotchas
+- **Shell merging**: Sessions inherit from shell templates — MCPs/skills are union-merged, other fields are overridden by session
+- **Markdown fields**: `claude_md`, `policy_md`, `prompt` can be inline strings or file paths (contains `/` or ends in `.md`); paths resolve relative to the deck file
+- **Best-effort apply**: `apply.Execute()` logs errors but continues — it won't halt on partial failures
+- **Config append**: MCPs are appended as raw TOML to config.toml to preserve existing comments/formatting (not re-encoded)
+- **No deletions**: Diff engine only creates missing entities, never deletes existing ones
