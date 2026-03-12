@@ -20,23 +20,26 @@ func main() {
 
 	switch os.Args[1] {
 	case "validate":
-		if len(os.Args) < 3 {
-			fmt.Fprintln(os.Stderr, "Usage: shuffle validate <deck.yaml>")
+		path, cliProfile := parseSubcommandArgs(os.Args[2:])
+		if path == "" {
+			fmt.Fprintln(os.Stderr, "Usage: shuffle validate [--profile <name>] <deck.yaml>")
 			os.Exit(1)
 		}
-		os.Exit(runValidate(os.Args[2]))
+		os.Exit(runValidate(path, cliProfile))
 	case "diff":
-		if len(os.Args) < 3 {
-			fmt.Fprintln(os.Stderr, "Usage: shuffle diff <deck.yaml>")
+		path, cliProfile := parseSubcommandArgs(os.Args[2:])
+		if path == "" {
+			fmt.Fprintln(os.Stderr, "Usage: shuffle diff [--profile <name>] <deck.yaml>")
 			os.Exit(1)
 		}
-		os.Exit(runDiff(os.Args[2]))
+		os.Exit(runDiff(path, cliProfile))
 	case "deal":
-		if len(os.Args) < 3 {
-			fmt.Fprintln(os.Stderr, "Usage: shuffle deal <deck.yaml>")
+		path, cliProfile := parseSubcommandArgs(os.Args[2:])
+		if path == "" {
+			fmt.Fprintln(os.Stderr, "Usage: shuffle deal [--profile <name>] <deck.yaml>")
 			os.Exit(1)
 		}
-		os.Exit(runDeal(os.Args[2]))
+		os.Exit(runDeal(path, cliProfile))
 	case "help", "--help", "-h":
 		printUsage()
 	case "version", "--version":
@@ -48,10 +51,25 @@ func main() {
 	}
 }
 
+// parseSubcommandArgs extracts --profile flag and the positional deck path from subcommand args.
+func parseSubcommandArgs(args []string) (path, profile string) {
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--profile" || args[i] == "-p" {
+			i++
+			if i < len(args) {
+				profile = args[i]
+			}
+		} else if path == "" {
+			path = args[i]
+		}
+	}
+	return
+}
+
 func printUsage() {
 	fmt.Println(`shuffle - Declarative configuration for agent-deck
 
-Usage: shuffle <command> <deck.yaml>
+Usage: shuffle <command> [flags] <deck.yaml>
 
 Commands:
   validate <deck.yaml>   Validate a deck file without applying
@@ -60,13 +78,16 @@ Commands:
   version                Show version
   help                   Show this help
 
+Flags:
+  --profile, -p <name>   Override the target agent-deck profile
+
 Examples:
   shuffle validate codecorral.deck.yaml
   shuffle diff codecorral.deck.yaml
-  shuffle deal codecorral.deck.yaml`)
+  shuffle deal --profile work codecorral.deck.yaml`)
 }
 
-func runValidate(path string) int {
+func runValidate(path, cliProfile string) int {
 	d, err := deck.Load(path)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -82,18 +103,20 @@ func runValidate(path string) int {
 		return 1
 	}
 
+	profile, profileSource := resolveProfile(d, cliProfile)
+	fmt.Printf("Profile: %s (%s)\n", profile, profileSource)
 	fmt.Println("Deck is valid.")
 	return 0
 }
 
-func runDiff(path string) int {
+func runDiff(path, cliProfile string) int {
 	d, err := loadAndResolve(path)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
 
-	profile, profileSource := resolveProfile(d)
+	profile, profileSource := resolveProfile(d, cliProfile)
 	fmt.Printf("Profile: %s (%s)\n\n", profile, profileSource)
 
 	cur, err := state.Discover(profile)
@@ -115,7 +138,7 @@ func runDiff(path string) int {
 	return 0
 }
 
-func runDeal(path string) int {
+func runDeal(path, cliProfile string) int {
 	// Check agent-deck is available
 	if _, err := exec.LookPath("agent-deck"); err != nil {
 		fmt.Fprintln(os.Stderr, "Error: agent-deck not found on PATH. Install it first: https://github.com/asheshgoplani/agent-deck")
@@ -128,7 +151,7 @@ func runDeal(path string) int {
 		return 1
 	}
 
-	profile, profileSource := resolveProfile(d)
+	profile, profileSource := resolveProfile(d, cliProfile)
 	fmt.Printf("Profile: %s (%s)\n\n", profile, profileSource)
 
 	cur, err := state.Discover(profile)
@@ -155,7 +178,11 @@ func runDeal(path string) int {
 }
 
 // resolveProfile returns the profile name and a description of where it came from.
-func resolveProfile(d *deck.Deck) (string, string) {
+// Priority: CLI --profile flag > deck YAML profile.name > agent-deck default.
+func resolveProfile(d *deck.Deck, cliProfile string) (string, string) {
+	if cliProfile != "" {
+		return cliProfile, "from --profile flag"
+	}
 	if d.Profile != nil && d.Profile.Name != "" {
 		return d.Profile.Name, "from deck"
 	}
