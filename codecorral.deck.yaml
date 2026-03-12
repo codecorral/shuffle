@@ -1,0 +1,78 @@
+name: codecorral
+
+profile:
+  name: codecorral
+
+mcps:
+  github:
+    command: npx
+    args: ["-y", "@anthropic/mcp-github"]
+    env:
+      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+    description: GitHub MCP for PR/issue management
+  exa:
+    command: npx
+    args: ["-y", "@anthropic/mcp-exa"]
+    description: Exa search MCP
+  sequential-thinking:
+    command: npx
+    args: ["-y", "@anthropic/mcp-sequential-thinking"]
+    description: Sequential thinking MCP
+
+shells:
+  elaboration:
+    agent: claude
+    worktree: subdirectory
+    mcps: [github, sequential-thinking]
+    prompt: |
+      You are working on an elaboration task. Focus on research,
+      design, and specification. Do not write implementation code.
+  construction:
+    agent: claude
+    worktree: subdirectory
+    mcps: [github]
+    prompt: |
+      You are working on a construction task. Implement the design
+      from the elaboration phase. Write clean, tested code.
+
+groups:
+  elaboration:
+    conductors:
+      clint:
+        description: "Elaboration conductor - manages intent sessions"
+        heartbeat: true
+        claude_md: |
+          # Clint - Elaboration Conductor
+
+          You manage elaboration sessions. Your job is to:
+          1. Monitor intent sessions for completion
+          2. Review elaboration artifacts
+          3. Report status to the user
+    sessions:
+      intent:
+        shell: elaboration
+        mcps: [exa]
+        prompt: |
+          Begin elaboration on the current intent.
+          Read the proposal and create design + specs.
+
+  construction:
+    conductors:
+      foreman:
+        description: "Construction conductor - manages unit sessions"
+        heartbeat: true
+        claude_md: ./conductors/foreman.md
+    sessions:
+      unit-1:
+        shell: construction
+        parent: foreman
+        prompt: "Implement the first unit of work."
+      unit-2:
+        shell: construction
+        parent: foreman
+
+  operations:
+    sessions:
+      ralph-tui:
+        command: ralph-tui run --parallel 3
+        path: .

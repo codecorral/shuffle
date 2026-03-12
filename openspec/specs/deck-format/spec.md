@@ -37,8 +37,12 @@ The `shells` section SHALL be a map of shell name to session template. A shell t
 - **THEN** the session SHALL inherit all fields from the referenced shell template
 
 #### Scenario: Session overrides shell field
-- **WHEN** a session declares `shell: my-shell` and also declares `mcps: [extra]`
-- **THEN** the session's `mcps` value SHALL override the shell's `mcps` value (not merge)
+- **WHEN** a session declares `shell: my-shell` and also declares `agent: gemini`
+- **THEN** the session's `agent` field SHALL override the shell's `agent` field
+
+#### Scenario: Session merges MCP lists with shell
+- **WHEN** a shell declares `mcps: [github]` and a session using that shell declares `mcps: [exa]`
+- **THEN** the resolved session SHALL have `mcps: [github, exa]` (union, not override)
 
 #### Scenario: Shell references nonexistent
 - **WHEN** a session references a shell name that does not exist in the `shells` section
@@ -69,6 +73,10 @@ A session declaration SHALL support: `agent` (string), `command` (string), `shel
 #### Scenario: Session with parent
 - **WHEN** a session declares `parent: my-conductor`
 - **THEN** shuffle SHALL create the session with `--parent "my-conductor"`
+
+#### Scenario: Session with worktree
+- **WHEN** a session declares `worktree: subdirectory`
+- **THEN** shuffle SHALL create the session with agent-deck's worktree support using the specified location strategy
 
 #### Scenario: Neither agent nor command nor shell
 - **WHEN** a session declares none of `agent`, `command`, or `shell`

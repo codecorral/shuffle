@@ -1,26 +1,135 @@
 # Shuffle
 
-Declarative configuration for [AgentDeck](https://github.com/asheshgoplani/agent-deck). Tools to initialize and configure agent-deck profiles using static configuration-driven grouping and predefined session shells.
+Declarative configuration for [AgentDeck](https://github.com/asheshgoplani/agent-deck). Define your entire agent-deck setup — profiles, groups, sessions, conductors, MCPs — in a single YAML file and apply it idempotently.
 
 ## Overview
 
-Shuffle provides a "deal" — a declarative configuration that sets up agent-deck with predefined groups, session shells, and profiles. Instead of manually configuring agent-deck sessions, define your setup in a configuration file and let Shuffle apply it.
+Shuffle provides a "deal" — a declarative configuration that sets up agent-deck with predefined groups, session shells, and profiles. Instead of manually running dozens of CLI commands, define your setup in a `.deck.yaml` file and let Shuffle apply it.
 
 ## Concepts
 
-- **Deal** — A complete agent-deck configuration (groups, sessions, shells) described declaratively
+- **Deal** — A complete agent-deck configuration described declaratively
 - **Groups** — Logical groupings of sessions (e.g., Elaboration, Construction, Operations)
-- **Session Shells** — Predefined session configurations with tools, prompts, and MCP attachments
-- **Profiles** — Reusable agent-deck profile definitions
+- **Session Shells** — Reusable session templates with agents, MCPs, worktree config, and prompts
+- **Profiles** — Agent-deck profile definitions
+- **Conductors** — Meta-agent orchestrators declared within groups
+
+## Installation
+
+```bash
+go install github.com/afterthought/shuffle/cmd/shuffle@latest
+```
+
+Or build from source:
+
+```bash
+git clone https://github.com/afterthought/shuffle.git
+cd shuffle
+go build -o shuffle ./cmd/shuffle/
+```
+
+Requires [agent-deck](https://github.com/asheshgoplani/agent-deck) on PATH.
+
+## CLI Usage
+
+```bash
+# Validate a deck file
+shuffle validate my-project.deck.yaml
+
+# Preview what changes would be made
+shuffle diff my-project.deck.yaml
+
+# Apply the deck to agent-deck
+shuffle deal my-project.deck.yaml
+```
+
+## Deck Format Reference
+
+A `.deck.yaml` file has these top-level sections:
+
+```yaml
+name: my-project          # Required: deck name
+
+profile:                   # Optional: agent-deck profile
+  name: my-profile
+
+mcps:                      # Optional: MCP server definitions
+  github:
+    command: npx
+    args: ["-y", "@anthropic/mcp-github"]
+    env:
+      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+    description: GitHub MCP
+
+shells:                    # Optional: reusable session templates
+  research:
+    agent: claude
+    worktree: subdirectory
+    mcps: [github]
+    prompt: "Focus on research and design."
+
+groups:                    # Optional: session groups
+  elaboration:
+    conductors:
+      clint:
+        description: "Elaboration conductor"
+        heartbeat: true
+        claude_md: |
+          # Conductor instructions
+          Manage elaboration sessions.
+    sessions:
+      intent:
+        shell: research
+        mcps: [exa]        # Merged with shell MCPs
+        prompt: "Begin elaboration."
+  operations:
+    sessions:
+      monitor:
+        command: ralph-tui run --parallel 3
+        path: .
+```
+
+### Session Fields
+
+| Field | Description |
+|-------|-------------|
+| `agent` | Agent to run (e.g., `claude`, `gemini`) |
+| `command` | Arbitrary command (e.g., `ralph-tui`) |
+| `shell` | Reference to a shell template |
+| `worktree` | Worktree strategy: `subdirectory`, `sibling`, or path |
+| `mcps` | MCP servers to attach |
+| `skills` | Skills to attach |
+| `prompt` | Initial message (inline string or file path) |
+| `path` | Project directory (default: `.`) |
+| `parent` | Parent session for sub-session linking |
+
+Exactly one of `agent`, `command`, or `shell` must be set.
+
+### Shell Merging
+
+When a session references a shell, fields are merged:
+- **MCPs**: Union (shell + session)
+- **Skills**: Union (shell + session)
+- **All other fields**: Session overrides shell
+
+### Markdown Fields
+
+`claude_md`, `policy_md`, and `prompt` accept either inline content or a file path:
+- Contains `/` or ends in `.md` → treated as file path
+- Otherwise → treated as inline content
+- YAML `|` block scalars are inline content
+
+## Behavior
+
+- **Idempotent**: Running `shuffle deal` twice makes no duplicate changes
+- **Additive**: Only creates missing entities, never deletes
+- **Non-destructive**: Manual sessions/groups are never touched
+- **Ordered**: Profile → MCPs → Groups → Conductors → Sessions → MCP attachments
 
 ## Related Repositories
 
 - [codecorral](https://github.com/codecorral/codecorral) — Agent orchestration framework (uses Shuffle for agent-deck setup)
 - [agent-deck](https://github.com/asheshgoplani/agent-deck) — Terminal session manager for AI coding agents
-
-## Installation
-
-TBD
 
 ## License
 

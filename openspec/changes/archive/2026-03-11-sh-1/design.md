@@ -55,6 +55,20 @@ Agent-deck's CLI surface (as of v0.24.1):
 **Choice**: Sessions support a `command` field as an alternative to `agent`. When `command` is set, it's passed directly to `agent-deck launch -c <command>`.
 **Rationale**: Supports ralph-tui, custom scripts, or any CLI tool as a session. Agent-deck's `-c` flag already accepts arbitrary commands (e.g., `codex --dangerously-bypass-approvals-and-sandbox`).
 
+### D8: Worktree configuration on sessions
+**Choice**: Sessions support a `worktree` field (`subdirectory`, `sibling`, or a custom path) that maps to agent-deck's `-w` flag and worktree location strategy.
+**Rationale**: Some sessions (elaboration, construction) need filesystem isolation via git worktrees. Shuffle declares the *intent* for worktree isolation; agent-deck handles creation. Worktree lifecycle (finish/merge) is handled externally by `agent-deck worktree finish` or process signals like `opsx:apply`.
+
+### D9: MCP lists merge, other fields override
+**Choice**: When a session references a shell, MCP lists are merged (union of shell MCPs + session MCPs). All other fields (agent, worktree, prompt, etc.) are overridden by the session-level value.
+**Rationale**: MCPs are additive — a session might need everything the shell provides plus extras. But agent type or worktree strategy should be a clean override, not a merge.
+
+### D10: Branch naming convention (informational)
+**Note**: Shuffle does not enforce branch naming, but the intended convention for CodeCorral consumers is:
+- `intent/<intent-name>` — elaboration work, merges to main
+- `unit/<intent-name>/<unit-name>` — construction work, merges to main independently
+- Both merge directly to main (flat, not nested). Units are grouped by intent name for readability but delivered independently.
+
 ## Risks / Trade-offs
 
 - **[Agent-deck CLI changes]** → Shuffle couples tightly to agent-deck's CLI flags and JSON output. Pin to known-good agent-deck versions and test against CLI output.

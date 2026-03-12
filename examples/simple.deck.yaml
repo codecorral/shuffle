@@ -1,0 +1,11 @@
+name: simple-project
+
+groups:
+  dev:
+    sessions:
+      backend:
+        agent: claude
+        path: .
+      frontend:
+        agent: claude
+        path: .

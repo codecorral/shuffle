@@ -1,0 +1,44 @@
+name: medium-project
+profile:
+  name: medium-project
+mcps:
+  github:
+    command: npx
+    args: ["-y", "@anthropic/mcp-github"]
+    env:
+      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+  sequential-thinking:
+    command: npx
+    args: ["-y", "@anthropic/mcp-sequential-thinking"]
+
+shells:
+  researcher:
+    agent: claude
+    mcps: [github, sequential-thinking]
+  builder:
+    agent: claude
+    mcps: [github]
+
+groups:
+  research:
+    sessions:
+      design:
+        shell: researcher
+        prompt: "Research the problem space and draft a design document."
+      spike:
+        shell: researcher
+        prompt: "Prototype the riskiest part of the design."
+  implementation:
+    sessions:
+      api:
+        shell: builder
+        path: .
+        prompt: "Implement the API layer per the design doc."
+      worker:
+        shell: builder
+        path: .
+  ops:
+    sessions:
+      monitor:
+        command: htop
+        path: .

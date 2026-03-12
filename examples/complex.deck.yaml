@@ -1,0 +1,102 @@
+name: codecorral-full
+
+profile:
+  name: codecorral
+
+mcps:
+  github:
+    command: npx
+    args: ["-y", "@anthropic/mcp-github"]
+    env:
+      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+    description: GitHub MCP for PR and issue management
+  exa:
+    command: npx
+    args: ["-y", "@anthropic/mcp-exa"]
+    description: Web search via Exa
+  sequential-thinking:
+    command: npx
+    args: ["-y", "@anthropic/mcp-sequential-thinking"]
+    description: Step-by-step reasoning
+  memory:
+    command: npx
+    args: ["-y", "@anthropic/mcp-memory"]
+    description: Persistent memory across sessions
+
+shells:
+  elaboration:
+    agent: claude
+    worktree: subdirectory
+    mcps: [github, sequential-thinking]
+    prompt: ./prompts/elaboration.md
+  construction:
+    agent: claude
+    worktree: subdirectory
+    mcps: [github]
+  review:
+    agent: claude
+    mcps: [github, sequential-thinking]
+
+groups:
+  elaboration:
+    conductors:
+      clint:
+        description: "Elaboration conductor - orchestrates intent research and design"
+        heartbeat: true
+        claude_md: |
+          # Clint - Elaboration Conductor
+
+          You manage elaboration sessions. Your job:
+          1. Assign intents to elaboration sessions
+          2. Monitor design and spec artifact quality
+          3. Gate intents before they move to construction
+          4. Report status via Telegram bridge
+    sessions:
+      intent-alpha:
+        shell: elaboration
+        mcps: [exa]
+        parent: clint
+      intent-beta:
+        shell: elaboration
+        mcps: [exa, memory]
+        parent: clint
+
+  construction:
+    conductors:
+      foreman:
+        description: "Construction conductor - manages unit implementation"
+        heartbeat: true
+        claude_md: ./conductors/foreman.md
+    sessions:
+      unit-api:
+        shell: construction
+        parent: foreman
+        prompt: "Implement the API service per approved specs."
+      unit-worker:
+        shell: construction
+        parent: foreman
+        prompt: "Implement the background worker per approved specs."
+      unit-migration:
+        shell: construction
+        parent: foreman
+        prompt: "Write and test the database migration."
+
+  quality:
+    sessions:
+      pr-review:
+        shell: review
+        prompt: "Review open PRs for correctness, security, and style."
+      integration-test:
+        agent: claude
+        mcps: [github]
+        path: .
+        prompt: "Run and monitor the integration test suite."
+
+  operations:
+    sessions:
+      ralph:
+        command: ralph-tui run --parallel 3
+        path: .
+      logs:
+        command: tail -f /var/log/app.log
+        path: .

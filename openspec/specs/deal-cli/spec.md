@@ -85,6 +85,28 @@ Shuffle deal SHALL apply entities in a fixed order: profile → MCPs (config.tom
 - **WHEN** a session declares MCP attachments
 - **THEN** both the MCP (in config.toml) and the session SHALL exist before `mcp attach` is called
 
+### Requirement: MCP attachment reconciliation
+Shuffle deal SHALL verify that each session's declared MCPs are attached. If an MCP is defined but not attached to a session, shuffle SHALL attach it.
+
+#### Scenario: MCP already attached
+- **WHEN** session "intent" should have MCP "github" and it is already attached
+- **THEN** shuffle SHALL skip the attachment
+
+#### Scenario: MCP not yet attached
+- **WHEN** session "intent" should have MCP "github" and it is not attached
+- **THEN** shuffle SHALL run `agent-deck mcp attach intent github`
+
+### Requirement: Conductor existence check
+Shuffle deal SHALL check if each declared conductor exists via `agent-deck conductor list --json`. If missing, it SHALL create it via `agent-deck conductor setup` and then move it to the declared group.
+
+#### Scenario: Conductor already exists
+- **WHEN** the deck declares conductor "clint" under group "clint" and a conductor named "clint" already exists
+- **THEN** shuffle SHALL skip conductor setup
+
+#### Scenario: Conductor with inline claude_md
+- **WHEN** the deck declares a conductor with inline `claude_md` content
+- **THEN** shuffle SHALL write the content to a temporary file, pass it to `conductor setup -claude-md`, then clean up
+
 ### Requirement: Error handling
 Shuffle deal SHALL report errors clearly and continue processing remaining entities when possible.
 
