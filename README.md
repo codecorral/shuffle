@@ -28,6 +28,14 @@ cd shuffle
 go build -o shuffle ./cmd/shuffle/
 ```
 
+Or with Nix:
+
+```bash
+nix build github:codecorral/shuffle
+# or add as a flake input:
+# shuffle.url = "github:codecorral/shuffle";
+```
+
 Requires [agent-deck](https://github.com/asheshgoplani/agent-deck) on PATH.
 
 ## CLI Usage
@@ -41,6 +49,9 @@ shuffle diff my-project.deck.yaml
 
 # Apply the deck to agent-deck
 shuffle deal my-project.deck.yaml
+
+# Override the target profile (takes priority over deck YAML profile.name)
+shuffle deal --profile work my-project.deck.yaml
 ```
 
 ## Deck Format Reference
