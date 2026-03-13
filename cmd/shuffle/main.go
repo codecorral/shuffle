@@ -180,9 +180,8 @@ func runDeal(path, cliProfile string, warnOnly bool) int {
 		return 0
 	}
 
-	basePath, _ := filepath.Abs(filepath.Dir(path))
 	fmt.Printf("Applying %d changes...\n", len(actions))
-	if err := apply.Execute(actions, profile, basePath); err != nil {
+	if err := apply.Execute(actions, profile); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		if warnOnly {
 			fmt.Fprintln(os.Stderr, "Continuing due to --warn-only")
@@ -227,6 +226,11 @@ func loadAndResolve(path string) (*deck.Deck, error) {
 
 	if err := deck.ResolveShells(d); err != nil {
 		return nil, fmt.Errorf("resolving shells: %w", err)
+	}
+
+	basePath, _ := filepath.Abs(filepath.Dir(path))
+	if err := deck.InlineFileRefs(d, basePath); err != nil {
+		return nil, fmt.Errorf("resolving file references: %w", err)
 	}
 
 	return d, nil

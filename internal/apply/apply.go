@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -15,8 +14,7 @@ import (
 
 // Execute runs a list of actions against agent-deck.
 // profile is the agent-deck profile to use (empty for default).
-// basePath is the directory of the deck file for resolving relative paths.
-func Execute(actions []adiff.Action, profile, basePath string) error {
+func Execute(actions []adiff.Action, profile string) error {
 	var errs []error
 	for _, a := range actions {
 		fmt.Printf("  %s\n", a.Description)
@@ -29,11 +27,11 @@ func Execute(actions []adiff.Action, profile, basePath string) error {
 		case adiff.CreateGroup:
 			err = createGroup(profile, a.Name)
 		case adiff.CreateConductor:
-			err = createConductor(profile, a.Name, a.Conductor, basePath)
+			err = createConductor(profile, a.Name, a.Conductor)
 		case adiff.MoveConductor:
 			err = moveConductor(profile, a.Name, a.Group)
 		case adiff.CreateSession:
-			err = createSession(profile, a.Name, a.Group, a.Session, basePath)
+			err = createSession(profile, a.Name, a.Group, a.Session)
 		case adiff.AttachMCP:
 			err = attachMCP(profile, a.SessionID, a.MCPName)
 		case adiff.AttachSkill:
@@ -123,7 +121,7 @@ func createGroup(profile, name string) error {
 	return runAgentDeck(args...)
 }
 
-func createConductor(profile, name string, cond *deck.Conductor, basePath string) error {
+func createConductor(profile, name string, cond *deck.Conductor) error {
 	args := buildProfileArgs(profile, "conductor", "setup", name)
 
 	if cond.Description != "" {
@@ -135,25 +133,21 @@ func createConductor(profile, name string, cond *deck.Conductor, basePath string
 	}
 
 	if cond.ClaudeMD != "" {
-		resolved, tmpFile, err := resolveMarkdownForCLI(cond.ClaudeMD, basePath)
+		tmpPath, err := writeTemp(cond.ClaudeMD)
 		if err != nil {
 			return err
 		}
-		if tmpFile != "" {
-			defer os.Remove(tmpFile)
-		}
-		args = append(args, "-claude-md", resolved)
+		defer os.Remove(tmpPath)
+		args = append(args, "-claude-md", tmpPath)
 	}
 
 	if cond.PolicyMD != "" {
-		resolved, tmpFile, err := resolveMarkdownForCLI(cond.PolicyMD, basePath)
+		tmpPath, err := writeTemp(cond.PolicyMD)
 		if err != nil {
 			return err
 		}
-		if tmpFile != "" {
-			defer os.Remove(tmpFile)
-		}
-		args = append(args, "-policy-md", resolved)
+		defer os.Remove(tmpPath)
+		args = append(args, "-policy-md", tmpPath)
 	}
 
 	return runAgentDeck(args...)
@@ -165,7 +159,7 @@ func moveConductor(profile, name, group string) error {
 	return runAgentDeck(args...)
 }
 
-func createSession(profile, name, group string, sess *deck.Session, basePath string) error {
+func createSession(profile, name, group string, sess *deck.Session) error {
 	path := sess.Path
 	if path == "" {
 		path = "."
@@ -200,11 +194,7 @@ func createSession(profile, name, group string, sess *deck.Session, basePath str
 	}
 
 	if sess.Prompt != "" {
-		content, err := deck.ResolveMarkdownField(sess.Prompt, basePath)
-		if err != nil {
-			return err
-		}
-		args = append(args, "-m", content)
+		args = append(args, "-m", sess.Prompt)
 	}
 
 	return runAgentDeck(args...)
@@ -240,30 +230,20 @@ func attachSkill(profile, sessionID, skillName string) error {
 	return runAgentDeck(args...)
 }
 
-// resolveMarkdownForCLI resolves a markdown field for use as a CLI flag value.
-// If it's a file path, returns the path. If inline, writes to a temp file and returns that path.
-// Returns (path, tempFilePath, error). Caller must clean up tempFilePath if non-empty.
-func resolveMarkdownForCLI(value, basePath string) (string, string, error) {
-	if deck.IsFilePath(value) {
-		path := value
-		if !filepath.IsAbs(path) {
-			path = filepath.Join(basePath, path)
-		}
-		return path, "", nil
-	}
-
-	// Inline content — write to temp file
+// writeTemp writes content to a temp file and returns its path.
+// Caller must clean up the file.
+func writeTemp(content string) (string, error) {
 	tmp, err := os.CreateTemp("", "shuffle-*.md")
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
-	if _, err := tmp.WriteString(value); err != nil {
+	if _, err := tmp.WriteString(content); err != nil {
 		tmp.Close()
 		os.Remove(tmp.Name())
-		return "", "", err
+		return "", err
 	}
 	tmp.Close()
-	return tmp.Name(), tmp.Name(), nil
+	return tmp.Name(), nil
 }
 
 func buildProfileArgs(profile string, args ...string) []string {

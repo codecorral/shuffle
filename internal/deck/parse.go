@@ -178,9 +178,61 @@ func ResolveShells(d *Deck) error {
 	return nil
 }
 
-// IsFilePath returns true if the value looks like a file path (contains / or ends in .md).
+// IsFilePath returns true if the value looks like a file path.
+// A value is treated as a file path if it starts with "./" or "/" or ends with ".md".
 func IsFilePath(value string) bool {
-	return strings.Contains(value, "/") || strings.HasSuffix(value, ".md")
+	return strings.HasPrefix(value, "./") || strings.HasPrefix(value, "/") || strings.HasSuffix(value, ".md")
+}
+
+// InlineFileRefs resolves all file-path references in the deck to inline content.
+// basePath is the directory of the deck file, used to resolve relative paths.
+// After this call, all markdown fields contain their content directly.
+func InlineFileRefs(d *Deck, basePath string) error {
+	// Resolve shell prompts
+	for name, shell := range d.Shells {
+		if shell.Prompt != "" {
+			resolved, err := ResolveMarkdownField(shell.Prompt, basePath)
+			if err != nil {
+				return fmt.Errorf("shell %q prompt: %w", name, err)
+			}
+			shell.Prompt = resolved
+			d.Shells[name] = shell
+		}
+	}
+
+	// Resolve group sessions and conductors
+	for gName, group := range d.Groups {
+		for sName, sess := range group.Sessions {
+			if sess.Prompt != "" {
+				resolved, err := ResolveMarkdownField(sess.Prompt, basePath)
+				if err != nil {
+					return fmt.Errorf("group %q session %q prompt: %w", gName, sName, err)
+				}
+				sess.Prompt = resolved
+				group.Sessions[sName] = sess
+			}
+		}
+		for cName, cond := range group.Conductors {
+			if cond.ClaudeMD != "" {
+				resolved, err := ResolveMarkdownField(cond.ClaudeMD, basePath)
+				if err != nil {
+					return fmt.Errorf("group %q conductor %q claude_md: %w", gName, cName, err)
+				}
+				cond.ClaudeMD = resolved
+			}
+			if cond.PolicyMD != "" {
+				resolved, err := ResolveMarkdownField(cond.PolicyMD, basePath)
+				if err != nil {
+					return fmt.Errorf("group %q conductor %q policy_md: %w", gName, cName, err)
+				}
+				cond.PolicyMD = resolved
+			}
+			group.Conductors[cName] = cond
+		}
+		d.Groups[gName] = group
+	}
+
+	return nil
 }
 
 // ResolveMarkdownField resolves a field value that may be inline content or a file path.
