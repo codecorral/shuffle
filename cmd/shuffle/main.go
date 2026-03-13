@@ -20,26 +20,26 @@ func main() {
 
 	switch os.Args[1] {
 	case "validate":
-		path, cliProfile := parseSubcommandArgs(os.Args[2:])
-		if path == "" {
+		opts := parseSubcommandArgs(os.Args[2:])
+		if opts.Path == "" {
 			fmt.Fprintln(os.Stderr, "Usage: shuffle validate [--profile <name>] <deck.yaml>")
 			os.Exit(1)
 		}
-		os.Exit(runValidate(path, cliProfile))
+		os.Exit(runValidate(opts.Path, opts.Profile))
 	case "diff":
-		path, cliProfile := parseSubcommandArgs(os.Args[2:])
-		if path == "" {
+		opts := parseSubcommandArgs(os.Args[2:])
+		if opts.Path == "" {
 			fmt.Fprintln(os.Stderr, "Usage: shuffle diff [--profile <name>] <deck.yaml>")
 			os.Exit(1)
 		}
-		os.Exit(runDiff(path, cliProfile))
+		os.Exit(runDiff(opts.Path, opts.Profile))
 	case "deal":
-		path, cliProfile := parseSubcommandArgs(os.Args[2:])
-		if path == "" {
-			fmt.Fprintln(os.Stderr, "Usage: shuffle deal [--profile <name>] <deck.yaml>")
+		opts := parseSubcommandArgs(os.Args[2:])
+		if opts.Path == "" {
+			fmt.Fprintln(os.Stderr, "Usage: shuffle deal [--profile <name>] [--warn-only] <deck.yaml>")
 			os.Exit(1)
 		}
-		os.Exit(runDeal(path, cliProfile))
+		os.Exit(runDeal(opts.Path, opts.Profile, opts.WarnOnly))
 	case "help", "--help", "-h":
 		printUsage()
 	case "version", "--version":
@@ -51,19 +51,32 @@ func main() {
 	}
 }
 
-// parseSubcommandArgs extracts --profile flag and the positional deck path from subcommand args.
-func parseSubcommandArgs(args []string) (path, profile string) {
+// subcommandOpts holds parsed flags for subcommands.
+type subcommandOpts struct {
+	Path     string
+	Profile  string
+	WarnOnly bool
+}
+
+// parseSubcommandArgs extracts flags and the positional deck path from subcommand args.
+func parseSubcommandArgs(args []string) subcommandOpts {
+	var opts subcommandOpts
 	for i := 0; i < len(args); i++ {
-		if args[i] == "--profile" || args[i] == "-p" {
+		switch args[i] {
+		case "--profile", "-p":
 			i++
 			if i < len(args) {
-				profile = args[i]
+				opts.Profile = args[i]
 			}
-		} else if path == "" {
-			path = args[i]
+		case "--warn-only":
+			opts.WarnOnly = true
+		default:
+			if opts.Path == "" {
+				opts.Path = args[i]
+			}
 		}
 	}
-	return
+	return opts
 }
 
 func printUsage() {
@@ -80,6 +93,7 @@ Commands:
 
 Flags:
   --profile, -p <name>   Override the target agent-deck profile
+  --warn-only            Log errors but exit 0 (for deal only)
 
 Examples:
   shuffle validate codecorral.deck.yaml
@@ -138,7 +152,7 @@ func runDiff(path, cliProfile string) int {
 	return 0
 }
 
-func runDeal(path, cliProfile string) int {
+func runDeal(path, cliProfile string, warnOnly bool) int {
 	// Check agent-deck is available
 	if _, err := exec.LookPath("agent-deck"); err != nil {
 		fmt.Fprintln(os.Stderr, "Error: agent-deck not found on PATH. Install it first: https://github.com/asheshgoplani/agent-deck")
@@ -170,7 +184,11 @@ func runDeal(path, cliProfile string) int {
 	fmt.Printf("Applying %d changes...\n", len(actions))
 	if err := apply.Execute(actions, profile, basePath); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
+		if warnOnly {
+			fmt.Fprintln(os.Stderr, "Continuing due to --warn-only")
+		} else {
+			return 1
+		}
 	}
 
 	fmt.Println("Deal complete.")

@@ -17,6 +17,7 @@ import (
 // profile is the agent-deck profile to use (empty for default).
 // basePath is the directory of the deck file for resolving relative paths.
 func Execute(actions []adiff.Action, profile, basePath string) error {
+	var errs []error
 	for _, a := range actions {
 		fmt.Printf("  %s\n", a.Description)
 		var err error
@@ -40,8 +41,15 @@ func Execute(actions []adiff.Action, profile, basePath string) error {
 		}
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "  ERROR: %s: %v\n", a.Description, err)
-			// Continue processing remaining actions (non-destructive, best-effort)
+			errs = append(errs, fmt.Errorf("%s: %w", a.Description, err))
 		}
+	}
+	if len(errs) > 0 {
+		msgs := make([]string, len(errs))
+		for i, e := range errs {
+			msgs[i] = e.Error()
+		}
+		return fmt.Errorf("%d action(s) failed:\n  %s", len(errs), strings.Join(msgs, "\n  "))
 	}
 	return nil
 }
