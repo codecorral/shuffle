@@ -23,6 +23,8 @@ shuffle/
     diff/            # Diff engine — computes actions from desired vs current state
     apply/           # Action executor — runs agent-deck CLI commands
   examples/          # Example .deck.yaml files (simple, medium, complex)
+    conductors/      # Conductor prompt templates
+    prompts/         # Session prompt templates
   openspec/          # OpenSpec change management
     changes/         # Active change proposals
     specs/           # Main specifications
@@ -33,14 +35,16 @@ shuffle/
 - Configuration format should be declarative and human-readable
 - Support agent-deck's full configuration surface (groups, sessions, shells, MCPs, skills, conductors)
 - Build: `go build ./cmd/shuffle/`
+- Build (Nix): `nix build`
 - Test: `go test ./...`
 - Requires Go 1.18+ (uses generics)
 
 ## CLI Usage
 ```
-shuffle validate <deck.yaml>   # Parse, validate, check references
-shuffle diff <deck.yaml>       # Show planned actions (desired vs current state)
-shuffle deal <deck.yaml>       # Apply the deck (execute actions via agent-deck)
+shuffle validate [--profile <name>] <deck.yaml>   # Parse, validate, check references
+shuffle diff [--profile <name>] <deck.yaml>       # Show planned actions (desired vs current)
+shuffle deal [--profile <name>] [--warn-only] <deck.yaml>  # Apply the deck
+shuffle version                                    # Show version
 ```
 
 ## Runtime Requirements
